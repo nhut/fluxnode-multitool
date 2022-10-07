@@ -634,7 +634,7 @@ function start_daemon() {
 		MSG1='Starting daemon & syncing with chain please be patient this will take about 5 min...'
 		MSG2=''
 		spinning_timer 
-		chain_check=$($COIN_CLI $1 getinfo  2>&1 >/dev/null | grep "Activating" | wc -l)   
+		chain_check=$($COIN_CLI $1 getinfo  2>&1 >/dev/null | grep "Activating" | wc -l)
 		if [[ "$chain_check" == "1" ]]; then
 			echo -e ""
 			echo -e "${ARROW} ${CYAN}Activating best chain detected....Awaiting increased for next 5min${NC}"
@@ -648,7 +648,7 @@ function start_daemon() {
 		fi
 		x=$(( $x + 1 ))   
 	done
-	if [[ "$($COIN_CLI $1 getinfo 2>/dev/null  | jq -r '.version' 2>/dev/null)" != "" ]]; then  
+	if [[ "$($COIN_CLI $1 getinfo 2>/dev/null  | jq -r '.version' 2>/dev/null)" != "" ]]; then
 		NUM='2'
 		MSG1='Getting info...'
 		MSG2="${CYAN}.........................[${CHECK_MARK}${CYAN}]${NC}"
@@ -690,12 +690,25 @@ function install_process() {
 	echo -e "${ARROW} ${YELLOW}Configuring service repositories...${NC}"
 	sudo rm /etc/apt/sources.list.d/mongodb*.list > /dev/null 2>&1
 	sudo rm /usr/share/keyrings/mongodb-archive-keyring.gpg > /dev/null 2>&1 
-  
-	curl -fsSL https://www.mongodb.org/static/pgp/server-6.0.asc | gpg --dearmor | sudo tee /usr/share/keyrings/mongodb-archive-keyring.gpg > /dev/null 2>&1
+	if [[ $(lsb_release -cs) = *jammy* ]]; then
+	  curl -fsSL https://www.mongodb.org/static/pgp/server-5.0.asc | gpg --dearmor | sudo tee /usr/share/keyrings/mongodb-archive-keyring.gpg > /dev/null 2>&1
+	else
+	  curl -fsSL https://www.mongodb.org/static/pgp/server-4.4.asc | gpg --dearmor | sudo tee /usr/share/keyrings/mongodb-archive-keyring.gpg > /dev/null 2>&1
+	fi
 	if [[ $(lsb_release -d) = *Debian* ]]; then 
-		echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] https://repo.mongodb.org/apt/debian buster/mongodb-org/6.0 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list > /dev/null 2>&1
+		if [[ $(lsb_release -cs) = *stretch* || $(lsb_release -cs) = *buster* ]]; then
+		   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] http://repo.mongodb.org/apt/debian $(lsb_release -cs)/mongodb-org/4.4 main" 2> /dev/null | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list > /dev/null 2>&1
+		else
+	   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] http://repo.mongodb.org/apt/debian buster/mongodb-org/4.4 main" 2> /dev/null | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list > /dev/null 2>&1
+		fi
 	elif [[ $(lsb_release -d) = *Ubuntu* ]]; then 
-		echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list > /dev/null 2>&1
+		if [[ $(lsb_release -cs) = *focal* || $(lsb_release -cs) = *bionic* || $(lsb_release -cs) = *xenial* ]]; then
+			echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] http://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/4.4 multiverse" 2> /dev/null | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list > /dev/null 2>&1
+		elif [[ $(lsb_release -cs) = *jammy* ]]; then
+			echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" 2> /dev/null | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list > /dev/null 2>&1
+		else
+			echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" 2> /dev/null | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list > /dev/null 2>&1
+		fi
 	else
 	  echo -e "${WORNING} ${RED}OS type not supported..${NC}"
 	  echo -e "${WORNING} ${CYAN}Installation stopped...${NC}"
